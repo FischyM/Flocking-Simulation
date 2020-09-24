@@ -11,9 +11,11 @@ PrintWriter output;
 float framerateSum = 0;
 float total_frames = 0;
 Vec2 Dog;
-Pen Enclosure;
+Obstacle Enclosure;
 float enclosureX = 90;
-float emclosureY = 70;
+float enclosureY = 70;
+Post posts[] = new Post[4];
+float rad = 30;
 
 
 void setup() {
@@ -32,9 +34,15 @@ void setup() {
   imageMode(CENTER);
 
   output = createWriter("average_framerate_calc.txt");
-  Enclosure = new Pen(enclosureX, emclosureY);
+  Enclosure = new Obstacle(enclosureX, enclosureY);
   
   Dog = new Vec2(mouseX, mouseY);
+  
+  // create 4 posts in each corner of the screen
+  posts[0] = new Post(width/4, height/4, rad);
+  posts[1] = new Post(width*3/4, height/4, rad);
+  posts[2] = new Post(width*3/4, height*3/4, rad);
+  posts[3] = new Post(width/4, height*3/4, rad);
 
 }
 
@@ -45,6 +53,11 @@ void draw() {
   
   // draw the pen that the dog can't get into, but the sheep can
   Enclosure.drawPen();
+  
+  // draw posts
+  for (Post post : posts){
+    post.drawPost();
+  }
 
   // check for dog collision with Enclosure and if there are no collisions, update Dog position
   Vec2 cursor = new Vec2(mouseX, mouseY);
@@ -180,6 +193,18 @@ void draw() {
       sheep.accel.add(repel);
     }
     
+    // repel force of a post
+    for (Post post: posts){
+      if (post.checkAOE(sheep.pos)){
+        Vec2 repel = sheep.pos.minus(post.center);
+        repel.normalize();
+        sheep.pos.minus(repel);
+        repel.mul(sheep.max_speed);
+        repel.x = 0;
+        sheep.accel.add(repel.times(1.5)); 
+      }
+    }
+    
     //Goal Speed 
     Vec2 targetVel = sheep.vel;
     targetVel.setToLength(sheep.target_speed);
@@ -279,13 +304,36 @@ class Boid {
   }
 }
 
-class Pen{
+class Post{
+  Vec2 center;
+  float radius;
+  
+  Post(float x_, float y_, float r_){
+    center = new Vec2(x_, y_);
+    radius = r_;
+  }
+  
+  void drawPost(){
+    fill(color(82, 64, 47));
+    circle(center.x, center.y, radius);
+  }
+  
+  boolean checkAOE(Vec2 sheep){
+    if (sheep.distanceTo(center) <= radius*2){
+      return true;
+    }
+    return false;
+  }
+  
+}
+
+class Obstacle{
   Vec2 center;
   float x;
   float y;
   PShape shape;
   
-  Pen(float x_, float y_){
+  Obstacle(float x_, float y_){
     x = x_;
     y = y_;
     center = new Vec2(width/2, height/2);
@@ -331,10 +379,10 @@ class Pen{
   
   boolean CheckToDelete(Vec2 sheepPos){
     if (
-    (sheepPos.y >= (Enclosure.center.y + Enclosure.y - 5)) &&
-    (sheepPos.y <= (Enclosure.center.y + Enclosure.y + 1)) &&
-    (sheepPos.x >= (Enclosure.center.x - Enclosure.x + 20)) &&
-    (sheepPos.x <= (Enclosure.center.x + Enclosure.x - 20)) ){
+    (sheepPos.y >= (this.center.y + this.y - 5)) &&
+    (sheepPos.y <= (this.center.y + this.y + 1)) &&
+    (sheepPos.x >= (this.center.x - this.x + 20)) &&
+    (sheepPos.x <= (this.center.x + this.x - 20)) ){
       return true;
     }
     return false;
